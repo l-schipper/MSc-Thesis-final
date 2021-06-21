@@ -1,0 +1,183 @@
+#####################################################################
+###################### DATA PREP > DATASET ##########################
+#####################################################################
+# Set working directory
+
+#recreate df_total as its not correct!!!
+df_a = pd.read_excel('df_thesis.xlsx', sheet_name=1)
+df_b = pd.read_excel('df_thesis.xlsx', sheet_name=2) 
+df_c = pd.read_excel('df_thesis.xlsx', sheet_name=3)
+df_d = pd.read_excel('df_thesis.xlsx', sheet_name=4)
+df_e = pd.read_excel('df_thesis.xlsx', sheet_name=5) 
+df_f = pd.read_excel('df_thesis.xlsx', sheet_name=6) 
+df_g = pd.read_excel('df_thesis.xlsx', sheet_name=7)
+df_h = pd.read_excel('df_thesis.xlsx', sheet_name=8) 
+df_i = pd.read_excel('df_thesis.xlsx', sheet_name=9) 
+df_j = pd.read_excel('df_thesis.xlsx', sheet_name=10)
+df_k = pd.read_excel('df_thesis.xlsx', sheet_name=11)
+#df_l = pd.read_excel('df_thesis.xlsx', sheet_name=12)
+df_m = pd.read_excel('df_thesis.xlsx', sheet_name=13)
+df_n = pd.read_excel('df_thesis.xlsx', sheet_name=14)
+df_o = pd.read_excel('df_thesis.xlsx', sheet_name=15)
+df_p = pd.read_excel('df_thesis.xlsx', sheet_name=16)
+df_q = pd.read_excel('df_thesis.xlsx', sheet_name=17)
+#df_r = pd.read_excel('df_thesis.xlsx', sheet_name=18)
+df_s = pd.read_excel('df_thesis.xlsx', sheet_name=19)
+df_t = pd.read_excel('df_thesis.xlsx', sheet_name=20)
+df_u = pd.read_excel('df_thesis.xlsx', sheet_name=21)
+#df_v = pd.read_excel('df_thesis.xlsx', sheet_name=22)
+#df_w = pd.read_excel('df_thesis.xlsx', sheet_name=23)
+df_x = pd.read_excel('df_thesis.xlsx', sheet_name=24)
+df_y = pd.read_excel('df_thesis.xlsx', sheet_name=25)
+df_z = pd.read_excel('df_thesis.xlsx', sheet_name=26)
+df_aa = pd.read_excel('df_thesis.xlsx', sheet_name=27)
+df_bb = pd.read_excel('df_thesis.xlsx', sheet_name=28)
+df_cc = pd.read_excel('df_thesis.xlsx', sheet_name=29)
+df_dd = pd.read_excel('df_thesis.xlsx', sheet_name=30)
+df_ee = pd.read_excel('df_thesis.xlsx', sheet_name=31)
+df_ff = pd.read_excel('df_thesis.xlsx', sheet_name=32)
+df_gg = pd.read_excel('df_thesis.xlsx', sheet_name=33)
+df_hh = pd.read_excel('df_thesis.xlsx', sheet_name=34)
+df_ii = pd.read_excel('df_thesis.xlsx', sheet_name=35)
+df_jj = pd.read_excel('df_thesis.xlsx', sheet_name=36)
+df_kk = pd.read_excel('df_thesis.xlsx', sheet_name=37)
+
+# Create one huge list
+list_of_data = [df_a,df_b,df_c,df_d,df_e,df_f,df_g,df_h,df_i,df_j,df_k,df_m,df_n,df_o,df_p,df_q,df_s,df_t,df_u,df_x,df_y,df_z,df_aa,df_bb,df_cc,df_dd,df_ee,df_ff,df_gg,df_hh,df_ii,df_jj,df_kk]
+
+# Add new vars in all sheets
+for index in range(len(list_of_data)):
+    list_of_data[index]['std_price'] = list_of_data[index]['Price_per_unit']/list_of_data[index]['Price_per_unit'].mean()
+    list_of_data[index]['std_distri'] = list_of_data[index]['Distribution']/list_of_data[index]['Distribution'].mean()
+    list_of_data[index]['std_volume'] = list_of_data[index]['TotalVolume']/list_of_data[index]['TotalVolume'].mean()
+    list_of_data[index]['choice_by_prod'] = list_of_data[index]['choices']/list_of_data[index]['products']
+    list_of_data[index]['difference'] = (list_of_data[index]['marketshare']-list_of_data[index]['PrefSh_without'])/list_of_data[index]['PrefSh_without']
+    list_of_data[index]['absdiff'] = abs(list_of_data[index]['marketshare']-list_of_data[index]['PrefSh_without'])
+    #list_of_data[index] = list_of_data[index].dropna()
+
+# Create one big df
+df_total = pd.concat(list_of_data)
+df_total.info()
+
+df_total['tasks']
+
+# Drop SKU's, categorize freq and study
+df_total = df_total.drop(columns=['SKU'])
+df_total['frequency'] = df_total['frequency'].astype('category') # 1.0 = dagelijks 2.0=wekelijks, 3.0 = maand, 4.0 = quarterly
+df_total['study'] = df_total['study'].astype('category')
+
+# MinMax
+scaler = MinMaxScaler()
+df_total['respondenstmm'] = scaler.fit_transform(df_total[['respondents']])
+df_total['tasksmm'] = scaler.fit_transform(df_total[['tasks']])
+df_total['choicesmm'] = scaler.fit_transform(df_total[['choices']])
+df_total['productsmm'] = scaler.fit_transform(df_total[['products']])
+df_total['competitorsmm'] = scaler.fit_transform(df_total[['competitors']])
+
+# Totalling the absolute differences
+# changing df2 to 37 observations (1 per study)
+df_total['totalabsdiff'] = df_total.groupby(['study'])['absdiff'].transform('sum')
+df_total = df_total[np.isfinite(df_total['difference'])]
+
+df_total.to_csv('df_total_4.csv')
+###############################################
+##### PREP PART TWO - NO TOTALDF CREATION #####
+df_total = pd.read_csv('df_total_4.csv')
+df_total = df_total.drop(columns=['Unnamed: 0'])
+
+df_total.info()
+df_total['totalabsdiff'].min() # non negative: good
+df_total['difference'].min() # procent. so 60=600%
+df_total['Distribution'].isna().sum()
+df_total.isna().sum().sum()
+df_total['Price_per_unit'].isna().sum()
+
+df_total = df_total[df_total['TotalVolume'].notna()]
+df_total = df_total.drop(df_total[(df_total['PrefSh_without']==0) & (df_total['marketshare']==0)].index)
+df_total = df_total.drop(df_total[df_total['Price_per_unit']==0].index)
+df_total = df_total[np.isfinite(df_total['difference'])]
+
+sns.kdeplot(data=df_total.iloc[:,[5,6,7,8,9]])
+plt.show()
+
+df_total.info()
+df_total['is_want']=df_total['PrefSh_without']-df_total['marketshare']
+
+# Divide total dataset in two for the two regressions
+df_reg2 = df_total.iloc[:,[11,12,13,14,16,23,24]]       # study, stdprice, stddistri, stdvolume, difference, totalabsdiff
+df_reg1 = df_total.iloc[:,[11,10,18,19,20,21,22,23]]    # study, freq, respondentsmm, tasksmm, choicesmm, productsmm, competitiorsmm, totalabsdiff
+df_reg2b = df_total.iloc[:,[11,12,13,14,16,10,18,19,20,21,22,24]]
+
+df_reg2b = df_reg2b.dropna()
+df_reg2b = df_reg2b[np.isfinite(df_reg2b)]
+
+df_reg2b.isna().sum()
+df_reg2b.max()
+
+df_total.info()
+
+df_total.to_csv('df_total_5.csv')
+
+# * DATA DESCRIPTION TABLE
+print(tabulate((df_total.iloc[:,[5,6,7,8,9,23,24]].describe()).T, headers="keys", tablefmt="latex_booktabs"))
+df_total.loc[:,['PrefSh_without','marketshare']].describe()
+
+labelstot = df_total.iloc[:,[5,6,7,8,9,10,24]].columns.values
+bptot = plt.boxplot(df_total.iloc[:,[5,6,7,8,9,10,24]], labels=labelstot)
+print(tabulate(get_box_plot_data(labelstot,bptot), tablefmt="latex_booktabs"))
+plt.show()
+df_reg1['respondenstmm'].min()
+
+
+
+#####################################################################
+###################### NEW NEW NEW TEST DATA ########################
+#####################################################################
+
+# CREATE TEST DATA CSV
+df_a = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=1)
+df_b = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=2)
+df_c = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=3)
+df_d = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=4)
+df_e = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=5)
+df_f = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=6)
+df_g = pd.read_excel('C:/Users/l.schipper/SKIM/M&I - External Validity of Conjoint/Testdata/testdata.xlsx', sheet_name=0)
+
+list_of_data = [df_a,df_b,df_c,df_d,df_e,df_f,df_g]
+
+# Add new vars in all sheets
+for index in range(len(list_of_data)):
+    list_of_data[index]['std_price'] = list_of_data[index]['Price_per_unit']/list_of_data[index]['Price_per_unit'].mean()
+    list_of_data[index]['std_distri'] = list_of_data[index]['Distribution']/list_of_data[index]['Distribution'].mean()
+    list_of_data[index]['std_volume'] = list_of_data[index]['TotalVolume']/list_of_data[index]['TotalVolume'].mean()
+    #list_of_data[index] = list_of_data[index].dropna()
+
+# Create one big df
+df_total = pd.concat(list_of_data)
+
+# Drop SKU's, categorize freq and study
+df_total = df_total.drop(columns=['SKU'])
+df_total['frequency'] = df_total['frequency'].astype('category') # 1.0 = dagelijks 2.0=wekelijks, 3.0 = maand, 4.0 = quarterly
+df_total['study'] = df_total['study'].astype('category')
+
+# MinMax
+scaler = MinMaxScaler()
+df_total['respondenstmm'] = scaler.fit_transform(df_total[['respondents']])
+df_total['tasksmm'] = scaler.fit_transform(df_total[['tasks']])
+df_total['choicesmm'] = scaler.fit_transform(df_total[['choices']])
+df_total['productsmm'] = scaler.fit_transform(df_total[['products']])
+df_total['competitorsmm'] = scaler.fit_transform(df_total[['competitors']])
+
+df_total.info()
+df_total['Distribution'].isna().sum()
+df_total.isna().sum().sum()
+df_total['Price_per_unit'].isna().sum()
+
+df_total = df_total[df_total['TotalVolume'].notna()]
+df_total = df_total.drop(df_total[(df_total['PrefSh_without']==0) & (df_total['marketshare']==0)].index)
+df_total = df_total.drop(df_total[df_total['Price_per_unit']==0].index)
+
+df_total['is_want']=df_total['PrefSh_without']-df_total['marketshare']
+
+
+df_total.to_csv('testdata.csv')
